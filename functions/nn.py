@@ -157,63 +157,55 @@ def generate_model_report_pdf(
     window_indices,
     f1_per_window,
     acc_per_window,
-    profit_monetary_per_window, # Ensure this list contains monetary profits ($)
-    trades_per_window,           # Ensure this list contains total trades for each window
+    profit_monetary_per_window,
+    trades_per_window,
     initial_account_balance,
-    # Parameters
     window_size,
     val_size,
     step,
     cost_per_trade,
-    pip_value_per_standard_lot, # Corrected name for clarity
-    risk_per_trade_percentage,        # Corrected name for clarity (e.g., 0.1 for mini lot)
+    pip_value_per_standard_lot,
+    risk_per_trade_percentage,
     winning_trades,
     losing_trades,
-    profit_per_class,  # Dictionary with class labels as keys and total profit as values
-    trades_per_class,  # Dictionary with class labels as keys and total trades as values
+    profit_per_class,
+    trades_per_class,
     report_filename
 ):
-    # --- 1. Calculate Overall Statistics ---
+
     total_profit = np.sum(profit_monetary_per_window)
     total_trades = np.sum(trades_per_window)
     avg_f1 = np.mean(f1_per_window)
     avg_acc = np.mean(acc_per_window)
 
-    # Maximum drawdown calculation
     cumulative_balance = [initial_account_balance]
     for p in profit_monetary_per_window:
         cumulative_balance.append(cumulative_balance[-1] + p)
     cumulative_balance_arr = np.array(cumulative_balance)
     peak = cumulative_balance_arr[0]
     max_drawdown_percentage = 0
-    # Ensure cumulative_balance_arr has more than one element to avoid errors
     if len(cumulative_balance_arr) > 1:
         for balance in cumulative_balance_arr:
             if balance > peak:
-                peak = balance # Update peak if new high
-            # Drawdown for current balance relative to peak
-            # Ensure peak is not zero to avoid division by zero
+                peak = balance
             drawdown = (peak - balance) / peak if peak != 0 else 0
             if drawdown > max_drawdown_percentage:
                 max_drawdown_percentage = drawdown
 
-    # --- 2. Generate Plots as PNG images ---
-    # Set a style for better visualization
     sns.set_style("whitegrid")
     plt.rcParams.update({'font.size': 10})
 
-    # Plot 1: Performance Metrics per Window (2x2 grid)
     fig1, axes1 = plt.subplots(nrows=2, ncols=2, figsize=(15, 10))
     fig1.suptitle('Rolling Window Backtest Performance Metrics', fontsize=16)
 
     axes1[0, 0].plot(window_indices, profit_monetary_per_window, marker='o', linestyle='-', color='green', markersize=4)
     axes1[0, 0].set_title('Profit per Window (Dollars)')
     axes1[0, 0].set_xlabel('Window Index')
-    axes1[0, 0].set_ylabel('Total Profit ($)') # Corrected label to Dollars
+    axes1[0, 0].set_ylabel('Total Profit ($)')
     axes1[0, 0].grid(True)
     axes1[0, 0].axhline(0, color='gray', linestyle='--', linewidth=0.8)
 
-    axes1[0, 1].plot(window_indices, trades_per_window, marker='o', linestyle='-', color='blue', markersize=4) # Changed 'trade_per_window' to 'trades_per_window'
+    axes1[0, 1].plot(window_indices, trades_per_window, marker='o', linestyle='-', color='blue', markersize=4)
     axes1[0, 1].set_title('Number of Trades per Window')
     axes1[0, 1].set_xlabel('Window Index')
     axes1[0, 1].set_ylabel('Number of Trades')
@@ -236,11 +228,10 @@ def generate_model_report_pdf(
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plot1_path = 'temp_metrics_plot.png'
     fig1.savefig(plot1_path)
-    plt.close(fig1) # Close the figure to free up memory
+    plt.close(fig1)
 
-    # Plot 2: Cumulative Profit
     fig2 = plt.figure(figsize=(12, 6))
-    plt.plot(window_indices, cumulative_balance_arr[1:], color='darkgreen', linewidth=2) # [1:] because initial balance is at index 0
+    plt.plot(window_indices, cumulative_balance_arr[1:], color='darkgreen', linewidth=2)
     plt.title('Cumulative Account Balance Over Windows')
     plt.xlabel('Window Index')
     plt.ylabel(f'Cumulative Balance ($)')
@@ -253,19 +244,16 @@ def generate_model_report_pdf(
     fig2.savefig(plot2_path)
     plt.close(fig2)
 
-    # --- 3. Create PDF Report ---
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
-    # Title Page
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, "Trading Model Performance Report", 0, 1, "C")
     pdf.set_font("Arial", "", 10)
     pdf.cell(0, 10, f"Date: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}", 0, 1, "C")
     pdf.ln(3)
 
-    # Parameters Section
     pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 10, "1. Backtest Parameters", 0, 1, "L")
     pdf.set_font("Arial", "", 10)
@@ -282,7 +270,6 @@ def generate_model_report_pdf(
     """)
     pdf.ln(3)
 
-    # Overall Summary Statistics
     pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 10, "2. Overall Performance Summary", 0, 1, "L")
     pdf.set_font("Arial", "", 10)
@@ -300,7 +287,6 @@ def generate_model_report_pdf(
     """)
     pdf.ln(3)
 
-    # Profit per predicted class summary
     pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 10, "3. Profit Per Predicted Class", 0, 1, "L")
     pdf.set_font("Arial", "", 10)
@@ -310,12 +296,11 @@ def generate_model_report_pdf(
         total_trades_cls = trades_per_class[cls]
         avg_profit_cls = total_profit_cls / total_trades_cls if total_trades_cls else 0
         pdf.cell(0, 7, f"Class {cls}: Trades = {total_trades_cls}, "
-                       f"Total Profit = ${total_profit_cls:,.2f}, "
-                       f"Avg Profit/Trade = ${avg_profit_cls:,.2f}", ln=1)
+                           f"Total Profit = ${total_profit_cls:,.2f}, "
+                           f"Avg Profit/Trade = ${avg_profit_cls:,.2f}", ln=1)
 
     pdf.ln(2)
 
-    # Win rate
     total_classified_trades = winning_trades + losing_trades
     win_rate = (winning_trades / total_classified_trades) * 100 if total_classified_trades else 0
     pdf.set_font("Arial", "B", 12)
@@ -323,7 +308,6 @@ def generate_model_report_pdf(
     pdf.set_font("Arial", "", 10)
     pdf.cell(0, 7, f"Win Rate: {win_rate:.2f}%", ln=1)
 
-    # Sharpe ratio calculation
     returns = np.array(profit_monetary_per_window)
     avg_return = np.mean(returns)
     std_return = np.std(returns)
@@ -332,24 +316,19 @@ def generate_model_report_pdf(
 
     pdf.ln(2)
 
-    # Plots Section
-    pdf.add_page() # Add a new page for plots
+    pdf.add_page()
     pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 10, "3. Performance Visualizations", 0, 1, "L")
     pdf.ln(2)
 
-    # Add Plot 1
     pdf.image(plot1_path, x=10, y=pdf.get_y(), w=180)
-    pdf.ln(fig1.get_size_inches()[1] * 13) # Move cursor down after image
+    pdf.ln(fig1.get_size_inches()[1] * 13)
 
-    # Add Plot 2
     pdf.image(plot2_path, x=10, y=pdf.get_y(), w=180)
-    pdf.ln(fig2.get_size_inches()[1] * 10) # Move cursor down after image
+    pdf.ln(fig2.get_size_inches()[1] * 10)
 
-    # Output PDF
     pdf.output(report_filename)
 
-    # --- 4. Clean up temporary image files ---
     os.remove(plot1_path)
     os.remove(plot2_path)
 
