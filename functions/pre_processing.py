@@ -49,6 +49,8 @@ def build_eurusd_dataset(filename):
     m5["roll_h1_close"] = m5["Close"].rolling(12).apply(lambda x: x.iloc[-1], raw=False)
     m5["roll_h1_vol"]   = m5["roll_h1_high"] - m5["roll_h1_low"]
     m5["roll_h1_relpos"] = (m5["Close"] - m5["roll_h1_low"]) / (m5["roll_h1_high"] - m5["roll_h1_low"] + 1e-6)
+    m5["returns"] = m5["Close"].pct_change()
+    m5["volatility"] = m5["returns"].rolling(12).std()
 
     # ---- 5. Build future-range label -----------------------------------------
     # Assumes 5-min candles
