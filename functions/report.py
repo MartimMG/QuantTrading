@@ -15,6 +15,9 @@ def generate_model_report_pdf(
     profit_monetary_per_window,
     trades_per_window,
     volatility_per_window,
+    local_vol_per_window,
+    losing_profit,
+    winning_profit,
     initial_account_balance,
     window_size,
     val_size,
@@ -89,6 +92,13 @@ def generate_model_report_pdf(
     axes1[2, 0].grid(True)
     axes1[2, 0].set_ylim(0, 0.0015)
 
+    axes1[2, 1].plot(window_indices, local_vol_per_window, marker='o', linestyle='-', color='orange', markersize=4)
+    axes1[2, 1].set_title('Local Volatility per Window')
+    axes1[2, 1].set_xlabel('Window Index')
+    axes1[2, 1].set_ylabel('Local Volatility')
+    axes1[2, 1].grid(True)
+    axes1[2, 1].set_ylim(0, 0.002)
+
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plot1_path = 'temp_metrics_plot.png'
     fig1.savefig(plot1_path)
@@ -107,6 +117,22 @@ def generate_model_report_pdf(
     plot2_path = 'temp_cumulative_plot.png'
     fig2.savefig(plot2_path)
     plt.close(fig2)
+
+    # Add correlation heatmap of window statistics to the report
+    df_stats = pd.DataFrame({
+        'profit': profit_monetary_per_window,
+        'num_trades': trades_per_window,
+        'f1': f1_per_window,
+        'accuracy': acc_per_window,
+        'volatility': volatility_per_window
+    })
+
+    fig_corr, ax_corr = plt.subplots(figsize=(8, 6))
+    sns.heatmap(df_stats.corr(), annot=True, cmap='coolwarm', ax=ax_corr)
+    plt.title('Correlation Heatmap of Window Statistics')
+    corr_plot_path = 'temp_corr_heatmap.png'
+    fig_corr.savefig(corr_plot_path)
+    plt.close(fig_corr)
 
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -149,6 +175,8 @@ def generate_model_report_pdf(
     - All-time Low Balance: ${np.min(cumulative_balance_arr):,.2f}
     - Winning Trades: {winning_trades:,}
     - Losing Trades: {losing_trades:,}
+    - Winning Trade Profit: ${np.mean(winning_profit):,.2f} (Average)
+    - Losing Trade Profit: ${np.mean(losing_profit):,.2f} (Average)
     """)
     pdf.ln(0.5)
 
@@ -192,9 +220,15 @@ def generate_model_report_pdf(
     pdf.image(plot2_path, x=10, y=pdf.get_y(), w=180)
     pdf.ln(fig2.get_size_inches()[1] * 10)
 
+    pdf.add_page()
+
+    pdf.image(corr_plot_path, x=10, y=pdf.get_y(), w=180)
+    pdf.ln(fig_corr.get_size_inches()[1] * 8)
+
     pdf.output(report_filename)
 
     os.remove(plot1_path)
     os.remove(plot2_path)
+    os.remove(corr_plot_path)
 
     print(f"\nReport generated successfully: {report_filename}")

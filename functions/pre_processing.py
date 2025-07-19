@@ -50,6 +50,7 @@ def build_eurusd_dataset(filename):
     m5["roll_h1_vol"]   = m5["roll_h1_high"] - m5["roll_h1_low"]
     m5["roll_h1_relpos"] = (m5["Close"] - m5["roll_h1_low"]) / (m5["roll_h1_high"] - m5["roll_h1_low"] + 1e-6)
     m5["returns"] = m5["Close"].pct_change()
+    m5["returns_mean"] = m5["Close"].rolling(12).mean()
     m5["volatility"] = m5["returns"].rolling(12).std()
 
     # ---- 5. Build future-range label -----------------------------------------
