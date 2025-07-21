@@ -14,6 +14,12 @@ def get_latest_data(symbol, timeframe, n):
     df['time'] = pd.to_datetime(df['time'], unit='s')
     return df
 
+def create_lstm_sequences(data, window_length):
+    X_seq = []
+    for i in range(len(data) - window_length):
+        X_seq.append(data[i:i+window_length])
+    return np.array(X_seq)
+
 def build_dataset(df):
     # ---- 1. Load raw M1 ASCII -----------------------------------------------
     df = df.astype({'open': float, 'high': float, 'low': float, 'close': float, 'tick_volume': float})
