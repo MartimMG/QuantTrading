@@ -1,0 +1,17 @@
+python-3.10
+Flask==3.0.3
+
+pandas
+numpy
+matplotlib
+scikit-learn
+yfinance
+ta
+joblib
+jupyterlab
+seaborn
+backtrader
+bt
+tensorflow
+oandapyV20
+MetaTrader5
