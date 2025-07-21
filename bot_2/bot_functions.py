@@ -113,3 +113,38 @@ def execute_trade(sl, tp, direction, lot_size_multiplier, symbol, deviation):
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
         mt5.order_send(order)
+
+def close_trade(avg_duration, open_positions, SYMBOL, DEVIATION):
+
+    max_duration = avg_duration * 5 * 60
+
+    for position in open_positions:
+        open_time = datetime.fromtimestamp(position.time)
+        duration_sec = (datetime.now() - open_time).total_seconds()
+
+        if duration_sec > max_duration:
+            current_price = (
+                mt5.symbol_info_tick(SYMBOL).bid
+                if position.type == mt5.ORDER_TYPE_BUY
+                else mt5.symbol_info_tick(SYMBOL).ask
+            )
+
+            close_type = (
+                mt5.ORDER_TYPE_SELL if position.type == mt5.ORDER_TYPE_BUY
+                else mt5.ORDER_TYPE_BUY
+            )
+
+            close_order = {
+                "action": mt5.TRADE_ACTION_DEAL,
+                "symbol": SYMBOL,
+                "volume": position.volume,
+                "type": close_type,
+                "price": current_price,
+                "deviation": DEVIATION,
+                "magic": 123456,
+                "comment": "Auto-close by duration",
+                "type_time": mt5.ORDER_TIME_GTC,
+                "type_filling": mt5.ORDER_FILLING_IOC,
+            }
+
+            mt5.order_send(close_order)
