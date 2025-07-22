@@ -1,5 +1,4 @@
 python-3.10
-Flask==3.0.3
 
 pandas
 numpy
@@ -13,5 +12,5 @@ seaborn
 backtrader
 bt
 tensorflow
-oandapyV20
 MetaTrader5
+oandapyV20

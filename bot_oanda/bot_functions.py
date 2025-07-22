@@ -1,5 +1,5 @@
 import MetaTrader5 as mt5
-from datetime import datetime, timezone
+import datetime
 import time
 import pytz
 import numpy as np
@@ -119,11 +119,8 @@ def close_trade(avg_duration, open_positions, SYMBOL, DEVIATION):
     max_duration = avg_duration * 5 * 60
 
     for position in open_positions:
-
-        open_time = datetime.fromtimestamp(position.time, tz=timezone.utc)
-        broker_now = datetime.fromtimestamp(mt5.symbol_info_tick(SYMBOL).time, tz=timezone.utc)
-
-        duration_sec = (broker_now - open_time).total_seconds()
+        open_time = datetime.fromtimestamp(position.time)
+        duration_sec = (datetime.now() - open_time).total_seconds()
 
         if duration_sec > max_duration:
             current_price = (
