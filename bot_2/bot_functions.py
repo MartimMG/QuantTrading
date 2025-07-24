@@ -139,13 +139,14 @@ def close_trade(avg_duration, open_positions, SYMBOL, DEVIATION):
 
             close_order = {
                 "action": mt5.TRADE_ACTION_DEAL,
+                "position": position.ticket,
                 "symbol": SYMBOL,
                 "volume": position.volume,
                 "type": close_type,
                 "price": current_price,
                 "deviation": DEVIATION,
                 "magic": 123456,
-                "comment": "Auto-close by duration",
+                "comment": "Close by duration",
                 "type_time": mt5.ORDER_TIME_GTC,
                 "type_filling": mt5.ORDER_FILLING_IOC,
             }

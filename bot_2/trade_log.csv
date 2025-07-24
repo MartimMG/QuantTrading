@@ -1,2 +1,2 @@
 timestamp,symbol,direction,signal,confidence,lot_size,sl,tp,profit,duration_sec,status
-2025-07-22T20:36:56.301000,EURUSD,1,3,0.8140391111373901,0.5,20,25,,,opened
+2025-07-24T08:59:27.717366,EURUSD,1,4,0.8153516054153442,0.51,20,25,,,opened
