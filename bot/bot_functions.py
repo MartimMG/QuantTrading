@@ -1,5 +1,5 @@
 import MetaTrader5 as mt5
-import datetime
+from datetime import datetime, timezone
 import time
 import pytz
 import numpy as np
@@ -14,6 +14,12 @@ def get_latest_data(symbol, timeframe, n):
     df['time'] = pd.to_datetime(df['time'], unit='s')
     return df
 
+def create_lstm_sequences(data, window_length):
+    X_seq = []
+    for i in range(len(data) - window_length):
+        X_seq.append(data[i:i+window_length])
+    return np.array(X_seq)
+
 def build_dataset(df):
     # ---- 1. Load raw M1 ASCII -----------------------------------------------
     df = df.astype({'open': float, 'high': float, 'low': float, 'close': float, 'tick_volume': float})
@@ -23,7 +29,7 @@ def build_dataset(df):
     df['Volume'] = 0
     
     m5 = df
-    # ---- 3. M5 Technical indicators -------------------------------------------
+# ---- 3. M5 Technical indicators -------------------------------------------
     m5["rsi"]  = ta.momentum.RSIIndicator(m5["Close"], 14).rsi()
     macd = ta.trend.MACD(m5["Close"])
     m5["macd"] = macd.macd_diff()
@@ -43,15 +49,14 @@ def build_dataset(df):
     m5["roll_h1_close"] = m5["Close"].rolling(12).apply(lambda x: x.iloc[-1], raw=False)
     m5["roll_h1_vol"]   = m5["roll_h1_high"] - m5["roll_h1_low"]
     m5["roll_h1_relpos"] = (m5["Close"] - m5["roll_h1_low"]) / (m5["roll_h1_high"] - m5["roll_h1_low"] + 1e-6)
-
-    
+    m5["returns"] = m5["Close"].pct_change()
+    m5["returns_mean"] = m5["Close"].rolling(12).mean()
+    m5["volatility"] = m5["returns"].rolling(12).std()
     # -7. Add temporal features --------------------------------------------
     m5["hour"]          = m5.index.hour
     m5["dayofweek"]     = m5.index.dayofweek
     m5["mins_into_m15"] = m5.index.minute % 15
     m5["frac_into_m15"] = m5["mins_into_m15"] / 15
-
-    # ---- 8. Drop NaNs caused by rolling / label shift ------------------------
 
     return m5
 
@@ -108,3 +113,42 @@ def execute_trade(sl, tp, direction, lot_size_multiplier, symbol, deviation):
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
         mt5.order_send(order)
+
+def close_trade(avg_duration, open_positions, SYMBOL, DEVIATION):
+
+    max_duration = avg_duration * 5 * 60
+
+    for position in open_positions:
+
+        open_time = datetime.fromtimestamp(position.time, tz=timezone.utc)
+        broker_now = datetime.fromtimestamp(mt5.symbol_info_tick(SYMBOL).time, tz=timezone.utc)
+
+        duration_sec = (broker_now - open_time).total_seconds()
+
+        if duration_sec > max_duration:
+            current_price = (
+                mt5.symbol_info_tick(SYMBOL).bid
+                if position.type == mt5.ORDER_TYPE_BUY
+                else mt5.symbol_info_tick(SYMBOL).ask
+            )
+
+            close_type = (
+                mt5.ORDER_TYPE_SELL if position.type == mt5.ORDER_TYPE_BUY
+                else mt5.ORDER_TYPE_BUY
+            )
+
+            close_order = {
+                "action": mt5.TRADE_ACTION_DEAL,
+                "position": position.ticket,
+                "symbol": SYMBOL,
+                "volume": position.volume,
+                "type": close_type,
+                "price": current_price,
+                "deviation": DEVIATION,
+                "magic": 123456,
+                "comment": "Close by duration",
+                "type_time": mt5.ORDER_TIME_GTC,
+                "type_filling": mt5.ORDER_FILLING_IOC,
+            }
+
+            mt5.order_send(close_order)

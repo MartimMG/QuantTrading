@@ -87,8 +87,9 @@ def optimize_sl_tp_per_class(y, close_prices, highs, lows, sl_values, tp_values,
                     temp_profit += outcome
                     temp_profit -= cost_per_trade
                     count += 1
-                if count > 0 and temp_profit > best_profit:
-                    best_profit = temp_profit
+                    expected_profit = temp_profit / count  # normalize by count
+                if count > 0 and expected_profit > best_profit:
+                    best_profit = expected_profit
                     best_pair = (sl, tp)
         sl_tp_map[cls] = {'sl': best_pair[0], 'tp': best_pair[1]}
     sl_tp_map[2] = {'sl': None, 'tp': None}  # no-trade

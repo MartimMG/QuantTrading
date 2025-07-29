@@ -55,22 +55,25 @@ class_to_direction = {0: -1, 1: -1, 2: 0, 3: 1, 4: 1}
 # ver isto...................
 DEVIATION = 10
 risk_per_trade_percentage = 0.01
+threshold = 0.7 
 
 # run the model
 while True:
+    account_info = mt5.account_info()
     df = get_latest_data(SYMBOL, TIMEFRAME, 50)
     X = build_dataset(df)
     X_scaled = scale(X, scaler)
     last_candle = X_scaled[-1:].copy()    
     prediction = model.predict(last_candle)
     signal = np.argmax(prediction)
+    confidence = np.max(prediction, axis=1)
     sltp = sl_tp_map.get(signal, {'sl': None, 'tp': None})
     sl = sltp['sl']
     tp = sltp['tp']
     balance = account_info.equity
     direction = class_to_direction.get(signal, 0)
     print(f"Predição: {signal}")
-    if signal != 2:
+    if direction == 1 and confidence >= threshold:
         lot_size_multiplier = calculate_lot_size_multiplier(sl, balance, risk_per_trade_percentage)
         execute_trade(sl, tp, direction, lot_size_multiplier, SYMBOL, DEVIATION)
     time.sleep(300)  # espera 5 minutos
