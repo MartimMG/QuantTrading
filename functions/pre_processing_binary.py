@@ -76,10 +76,10 @@ def build_eurusd_dataset_binary(filename):
             down_pips = (entry[i] - future_low) * 10_000
 
             # Immediate strong signal
-            if down_pips > 20:
+            if down_pips > 10:
                 label = 0  # short
                 break
-            elif up_pips > 20:
+            if up_pips > 10:
                 label = 2  # long
                 break
 

@@ -7,6 +7,7 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Input, LSTM, BatchNormalization, LeakyReLU
 from sklearn.utils import class_weight
+from tensorflow.keras.metrics import Precision, Recall, AUC
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,7 +22,7 @@ def create_lstm_sequences(data, labels, window_length):
         y_seq.append(labels[i+window_length]) 
     return np.array(X_seq), np.array(y_seq)
 
-def build_model_rnn(window_length, num_features, num_classes):
+def build_model_rnn(window_length, num_features):
     model = Sequential([
         Input(shape=(window_length, num_features)),
         LSTM(64),
@@ -29,11 +30,13 @@ def build_model_rnn(window_length, num_features, num_classes):
         Dense(32),
         BatchNormalization(),
         LeakyReLU(negative_slope=0.01),
-        Dense(num_classes, activation='softmax')
+        Dense(1, activation='sigmoid')
     ])
-    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',
+            Precision(name='precision_class_1'),
+            Recall(name='recall_class_1'),
+            AUC(name='auc')])
     return model
-
 # Has the limit in count
 def simulate_trade(entry_price, highs, lows, direction, sl, tp):
     for i, (high, low) in enumerate(zip(highs, lows)):
