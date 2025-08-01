@@ -32,11 +32,9 @@ def build_model_rnn(window_length, num_features):
         LeakyReLU(negative_slope=0.01),
         Dense(1, activation='sigmoid')
     ])
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy',
-            Precision(name='precision_class_1'),
-            Recall(name='recall_class_1'),
-            AUC(name='auc')])
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     return model
+
 # Has the limit in count
 def simulate_trade(entry_price, highs, lows, direction, sl, tp):
     for i, (high, low) in enumerate(zip(highs, lows)):

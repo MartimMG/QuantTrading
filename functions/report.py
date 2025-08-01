@@ -11,7 +11,6 @@ def generate_model_report_pdf(
     extra_steps,
     window_indices,
     f1_per_window,
-    acc_per_window,
     profit_monetary_per_window,
     trades_per_window,
     volatility_per_window,
@@ -36,7 +35,6 @@ def generate_model_report_pdf(
     total_profit = np.sum(profit_monetary_per_window)
     total_trades = np.sum(trades_per_window)
     avg_f1 = np.mean(f1_per_window)
-    avg_acc = np.mean(acc_per_window)
 
     cumulative_balance = [initial_account_balance]
     for p in profit_monetary_per_window:
@@ -78,13 +76,6 @@ def generate_model_report_pdf(
     axes1[1, 0].grid(True)
     axes1[1, 0].set_ylim(0, 1)
 
-    axes1[1, 1].plot(window_indices, acc_per_window, marker='o', linestyle='-', color='red', markersize=4)
-    axes1[1, 1].set_title('Accuracy per Window')
-    axes1[1, 1].set_xlabel('Window Index')
-    axes1[1, 1].set_ylabel('Accuracy')
-    axes1[1, 1].grid(True)
-    axes1[1, 1].set_ylim(0, 1)
-
     axes1[2, 0].plot(window_indices, volatility_per_window, marker='o', linestyle='-', color='orange', markersize=4)
     axes1[2, 0].set_title('Volatility per Window')
     axes1[2, 0].set_xlabel('Window Index')
@@ -123,7 +114,6 @@ def generate_model_report_pdf(
         'profit': profit_monetary_per_window,
         'num_trades': trades_per_window,
         'f1': f1_per_window,
-        'accuracy': acc_per_window,
         'volatility': volatility_per_window
     })
 
@@ -168,7 +158,6 @@ def generate_model_report_pdf(
     - Total Profit: ${total_profit:,.2f}
     - Total Trades: {total_trades:,}
     - Average F1-score (Weighted): {avg_f1:.3f}
-    - Average Accuracy: {avg_acc:.3f}
     - Maximum Drawdown: {max_drawdown_percentage * 100:.2f}%
     - Final Account Balance: ${cumulative_balance_arr[-1]:,.2f}
     - All-time High Balance: ${np.max(cumulative_balance_arr):,.2f}

@@ -76,10 +76,10 @@ def build_eurusd_dataset_binary(filename):
             down_pips = (entry[i] - future_low) * 10_000
 
             # Immediate strong signal
-            if down_pips > 10:
+            if down_pips > 20:
                 label = 0  # short
                 break
-            if up_pips > 10:
+            if up_pips > 20:
                 label = 2  # long
                 break
 
@@ -96,7 +96,7 @@ def build_eurusd_dataset_binary(filename):
 
     # ---- 8. Drop NaNs caused by rolling / label shift ------------------------
     m5 = m5.dropna()
-    m5_lon_ny = m5.drop(m5.between_time("22:00", "07:00").index)
+    m5_lon_ny = m5.drop(m5.between_time("07:00", "22:00").index)
     m5_inside_overlap = m5.between_time("12:00", "16:00")
 
     return m5_lon_ny
