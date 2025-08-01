@@ -29,6 +29,8 @@ def generate_model_report_pdf(
     profit_per_class,
     trades_per_class,
     threshold,
+    train_distributions,
+    val_distributions,
     report_filename
 ):
 

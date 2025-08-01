@@ -47,22 +47,22 @@ def label_and_confidence(i, entry, highs, lows, sl, tp, buffer_candles, max_step
         if max(tp_index, sl_index) <= i + buffer_candles:
             label = 0  # Too volatile: neutral
         else:
-            label = 1 if tp_index < sl_index else 0
+            label = 2 if tp_index < sl_index else 1
     elif tp_index is not None:
-        label = 1  # Long
+        label = 2  # Long
     else:
-        label = 0  # Short
+        label = 1  # Short
 
     # Compute confidence based on label
-    if label == 1:  # Long
+    if label == 2:  # Long
         confidence = (max_long_fav - max_long_adv) / (tp + sl)
+        confidence = float(np.clip(confidence, -1, 1))
+
+    elif label == 1:  # Short
+        confidence = (max_short_fav - max_short_adv) / (tp + sl)
         confidence = float(np.clip(confidence, -1, 1))
     else:
         confidence = 0.0
-
-        '''elif label == 1:  # Short
-        confidence = (max_short_fav - max_short_adv) / (tp + sl)
-        confidence = float(np.clip(confidence, -1, 1))'''
     
     return label, confidence
 
