@@ -31,8 +31,14 @@ def generate_model_report_pdf(
     threshold,
     train_distributions,
     val_distributions,
+    atr_per_window,
+    adx_per_window,
+    macd_per_window,
+    rsi_per_window,
     report_filename
 ):
+
+    volatility_per_window = flatten_or_average(volatility_per_window)
 
     total_profit = np.sum(profit_monetary_per_window)
     total_trades = np.sum(trades_per_window)
@@ -92,6 +98,35 @@ def generate_model_report_pdf(
     axes1[2, 1].grid(True)
     axes1[2, 1].set_ylim(0, 0.002)
 
+
+    # Combine ATR, ADX, MACD, RSI into a single figure with 4 subplots
+    atr_flat = flatten_or_average(atr_per_window)
+    adx_flat = flatten_or_average(adx_per_window)
+    macd_flat = flatten_or_average(macd_per_window)
+    rsi_flat = flatten_or_average(rsi_per_window)
+    fig_ind, axs_ind = plt.subplots(4, 1, figsize=(12, 12), sharex=True)
+    axs_ind[0].plot(window_indices, atr_flat, marker='o', linestyle='-', color='teal', markersize=4)
+    axs_ind[0].set_title('ATR per Window')
+    axs_ind[0].set_ylabel('ATR')
+    axs_ind[0].grid(True)
+    axs_ind[1].plot(window_indices, adx_flat, marker='o', linestyle='-', color='maroon', markersize=4)
+    axs_ind[1].set_title('ADX per Window')
+    axs_ind[1].set_ylabel('ADX')
+    axs_ind[1].grid(True)
+    axs_ind[2].plot(window_indices, macd_flat, marker='o', linestyle='-', color='navy', markersize=4)
+    axs_ind[2].set_title('MACD per Window')
+    axs_ind[2].set_ylabel('MACD')
+    axs_ind[2].grid(True)
+    axs_ind[3].plot(window_indices, rsi_flat, marker='o', linestyle='-', color='purple', markersize=4)
+    axs_ind[3].set_title('RSI per Window')
+    axs_ind[3].set_xlabel('Window Index')
+    axs_ind[3].set_ylabel('RSI')
+    axs_ind[3].grid(True)
+    plt.tight_layout()
+    all_indicators_path = 'temp_all_indicators.png'
+    fig_ind.savefig(all_indicators_path)
+    plt.close(fig_ind)
+
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plot1_path = 'temp_metrics_plot.png'
     fig1.savefig(plot1_path)
@@ -111,13 +146,17 @@ def generate_model_report_pdf(
     fig2.savefig(plot2_path)
     plt.close(fig2)
 
-    # Add correlation heatmap of window statistics to the report
     df_stats = pd.DataFrame({
         'profit': profit_monetary_per_window,
         'num_trades': trades_per_window,
         'f1': f1_per_window,
-        'volatility': volatility_per_window
+        'volatility': volatility_per_window,
+        'ATR': atr_per_window,
+        'ADX': adx_per_window,
+        'MACD': macd_per_window,
+        'RSI': rsi_per_window
     })
+
 
     fig_corr, ax_corr = plt.subplots(figsize=(8, 6))
     sns.heatmap(df_stats.corr(), annot=True, cmap='coolwarm', ax=ax_corr)
@@ -211,15 +250,61 @@ def generate_model_report_pdf(
     pdf.image(plot2_path, x=10, y=pdf.get_y(), w=180)
     pdf.ln(fig2.get_size_inches()[1] * 10)
 
-    pdf.add_page()
 
+    # Add combined indicator plot to the PDF
+    pdf.add_page()
+    pdf.image(all_indicators_path, x=10, y=pdf.get_y(), w=180)
+    pdf.ln(60)
+
+    pdf.add_page()
     pdf.image(corr_plot_path, x=10, y=pdf.get_y(), w=180)
     pdf.ln(fig_corr.get_size_inches()[1] * 8)
 
+    fig_dist, ax_dist = plt.subplots(figsize=(10, 6))
+    train_0 = [d.get(0, 0) for d in train_distributions]
+    train_1 = [d.get(1, 0) for d in train_distributions]
+    val_0 = [d.get(0, 0) for d in val_distributions]
+    val_1 = [d.get(1, 0) for d in val_distributions]
+
+    ax_dist.plot(window_indices, train_0, label='Train Class 0', color='blue', linestyle='--')
+    ax_dist.plot(window_indices, train_1, label='Train Class 1', color='blue')
+    ax_dist.plot(window_indices, val_0, label='Val Class 0', color='red', linestyle='--')
+    ax_dist.plot(window_indices, val_1, label='Val Class 1', color='red')
+
+    ax_dist.set_title('Class Distribution per Window')
+    ax_dist.set_xlabel('Window Index')
+    ax_dist.set_ylabel('Sample Count')
+    ax_dist.legend()
+
+    dist_plot_path = 'temp_class_dist.png'
+    fig_dist.savefig(dist_plot_path)
+    plt.close(fig_dist)
+
+    pdf.add_page()
+    pdf.image(dist_plot_path, x=10, y=pdf.get_y(), w=180)
+    pdf.ln(fig_dist.get_size_inches()[1] * 8)
+
     pdf.output(report_filename)
+
 
     os.remove(plot1_path)
     os.remove(plot2_path)
     os.remove(corr_plot_path)
+    os.remove(dist_plot_path)
+    os.remove(all_indicators_path)
 
     print(f"\nReport generated successfully: {report_filename}")
+
+# Helper to flatten or average any sequence elements in indicator lists
+def flatten_or_average(seq):
+    result = []
+    for x in seq:
+        if hasattr(x, '__iter__') and not isinstance(x, str):
+            arr = np.array(x)
+            if arr.size > 1:
+                result.append(np.mean(arr))
+            else:
+                result.append(float(arr))
+        else:
+            result.append(float(x))
+    return result

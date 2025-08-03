@@ -47,20 +47,17 @@ def label_and_confidence(i, entry, highs, lows, sl, tp, buffer_candles, max_step
         if max(tp_index, sl_index) <= i + buffer_candles:
             label = 0  # Too volatile: neutral
         else:
-            label = 2 if tp_index < sl_index else 1
+            label = 1 if tp_index < sl_index else 0
     elif tp_index is not None:
-        label = 2  # Long
+        label = 1 # Long
     else:
-        label = 1  # Short
+        label = 0  # Short
 
     # Compute confidence based on label
-    if label == 2:  # Long
+    if label == 1:  # Long
         confidence = (max_long_fav - max_long_adv) / (tp + sl)
         confidence = float(np.clip(confidence, -1, 1))
 
-    elif label == 1:  # Short
-        confidence = (max_short_fav - max_short_adv) / (tp + sl)
-        confidence = float(np.clip(confidence, -1, 1))
     else:
         confidence = 0.0
     
@@ -109,6 +106,16 @@ def build_eurusd_dataset_new(filename):
     m5["macd"] = macd.macd_diff()
     m5["body"] = m5["Close"] - m5["Open"]
     m5["vol_local"] = m5["High"] - m5["Low"]
+
+    # ATR (Average True Range)
+    atr = ta.volatility.AverageTrueRange(high=m5["High"], low=m5["Low"], close=m5["Close"], window=14)
+    m5["atr"] = atr.average_true_range()
+
+    # ADX (Average Directional Index)
+    adx = ta.trend.ADXIndicator(high=m5["High"], low=m5["Low"], close=m5["Close"], window=14)
+    m5["adx"] = adx.adx()
+    '''m5["adx_pos"] = adx.adx_pos()
+    m5["adx_neg"] = adx.adx_neg()'''
 
     # ---- 4b. Add Rolling M15 (3 x 5m) features --------------------------------
     m5["roll_m15_high"]  = m5["High"].rolling(3).max()
