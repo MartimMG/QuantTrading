@@ -5,12 +5,17 @@ import seaborn as sns
 from fpdf import FPDF
 import os
 
-
+class NumberedFPDF(FPDF):
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        page = f'Page {self.page_no()}'
+        self.cell(0, 10, page, 0, 0, 'C')
 def generate_model_report_pdf(
     steps,
     extra_steps,
     window_indices,
-    f1_per_window,
+    reports,
     profit_monetary_per_window,
     trades_per_window,
     volatility_per_window,
@@ -42,7 +47,6 @@ def generate_model_report_pdf(
 
     total_profit = np.sum(profit_monetary_per_window)
     total_trades = np.sum(trades_per_window)
-    avg_f1 = np.mean(f1_per_window)
 
     cumulative_balance = [initial_account_balance]
     for p in profit_monetary_per_window:
@@ -57,6 +61,31 @@ def generate_model_report_pdf(
             drawdown = (peak - balance) / peak if peak != 0 else 0
             if drawdown > max_drawdown_percentage:
                 max_drawdown_percentage = drawdown
+    
+
+    f1_per_window_0 = []
+    recall_per_window_0 = []
+    precision_per_window_0 = []
+    f1_per_window_1 = []
+    recall_per_window_1 = []
+    precision_per_window_1 = []
+    for report in reports:
+        if isinstance(report, dict):
+            f1_0 = report.get('0', {}).get('f1-score', 0)
+            recall_0 = report.get('0', {}).get('recall', 0)
+            precision_0 = report.get('0', {}).get('precision', 0)
+            f1_1 = report.get('1', {}).get('f1-score', 0)
+            recall_1 = report.get('1', {}).get('recall', 0)
+            precision_1 = report.get('1', {}).get('precision', 0)
+        else:
+            f1_0 = recall_0 = precision_0 = 0
+            f1_1 = recall_1 = precision_1 = 0
+        f1_per_window_0.append(f1_0)
+        recall_per_window_0.append(recall_0)
+        precision_per_window_0.append(precision_0)
+        f1_per_window_1.append(f1_1)
+        recall_per_window_1.append(recall_1)
+        precision_per_window_1.append(precision_1)
 
     sns.set_style("whitegrid")
     plt.rcParams.update({'font.size': 10})
@@ -77,12 +106,27 @@ def generate_model_report_pdf(
     axes1[0, 1].set_ylabel('Number of Trades')
     axes1[0, 1].grid(True)
 
-    axes1[1, 0].plot(window_indices, f1_per_window, marker='o', linestyle='-', color='purple', markersize=4)
-    axes1[1, 0].set_title('F1-score per Window (Weighted)')
+    # Plot precision, recall, and F1 for class 0
+    axes1[1, 0].plot(window_indices, precision_per_window_0, marker='o', linestyle='-', color='blue', label='Precision (Class 0)', markersize=4)
+    axes1[1, 0].plot(window_indices, recall_per_window_0, marker='o', linestyle='-', color='green', label='Recall (Class 0)', markersize=4)
+    axes1[1, 0].plot(window_indices, f1_per_window_0, marker='o', linestyle='-', color='purple', label='F1-score (Class 0)', markersize=4)
+    axes1[1, 0].set_title('Precision, Recall, F1 per Window (Class 0)')
     axes1[1, 0].set_xlabel('Window Index')
-    axes1[1, 0].set_ylabel('F1-score')
-    axes1[1, 0].grid(True)
+    axes1[1, 0].set_ylabel('Score')
     axes1[1, 0].set_ylim(0, 1)
+    axes1[1, 0].grid(True)
+    axes1[1, 0].legend()
+
+    # Plot precision, recall, and F1 for class 1
+    axes1[1, 1].plot(window_indices, precision_per_window_1, marker='o', linestyle='-', color='blue', label='Precision (Class 1)', markersize=4)
+    axes1[1, 1].plot(window_indices, recall_per_window_1, marker='o', linestyle='-', color='green', label='Recall (Class 1)', markersize=4)
+    axes1[1, 1].plot(window_indices, f1_per_window_1, marker='o', linestyle='-', color='purple', label='F1-score (Class 1)', markersize=4)
+    axes1[1, 1].set_title('Precision, Recall, F1 per Window (Class 1)')
+    axes1[1, 1].set_xlabel('Window Index')
+    axes1[1, 1].set_ylabel('Score')
+    axes1[1, 1].set_ylim(0, 1)
+    axes1[1, 1].grid(True)
+    axes1[1, 1].legend()
 
     axes1[2, 0].plot(window_indices, volatility_per_window, marker='o', linestyle='-', color='orange', markersize=4)
     axes1[2, 0].set_title('Volatility per Window')
@@ -104,7 +148,8 @@ def generate_model_report_pdf(
     adx_flat = flatten_or_average(adx_per_window)
     macd_flat = flatten_or_average(macd_per_window)
     rsi_flat = flatten_or_average(rsi_per_window)
-    fig_ind, axs_ind = plt.subplots(4, 1, figsize=(12, 12), sharex=True)
+    fig_ind, axs_ind = plt.subplots(2, 2, figsize=(14, 10), sharex=True)
+    axs_ind = axs_ind.flatten()
     axs_ind[0].plot(window_indices, atr_flat, marker='o', linestyle='-', color='teal', markersize=4)
     axs_ind[0].set_title('ATR per Window')
     axs_ind[0].set_ylabel('ATR')
@@ -149,7 +194,8 @@ def generate_model_report_pdf(
     df_stats = pd.DataFrame({
         'profit': profit_monetary_per_window,
         'num_trades': trades_per_window,
-        'f1': f1_per_window,
+        'f1_class_0': f1_per_window_0,
+        'f1_class_1': f1_per_window_1,
         'volatility': volatility_per_window,
         'ATR': atr_per_window,
         'ADX': adx_per_window,
@@ -198,7 +244,6 @@ def generate_model_report_pdf(
     pdf.multi_cell(0, 7, f"""
     - Total Profit: ${total_profit:,.2f}
     - Total Trades: {total_trades:,}
-    - Average F1-score (Weighted): {avg_f1:.3f}
     - Maximum Drawdown: {max_drawdown_percentage * 100:.2f}%
     - Final Account Balance: ${cumulative_balance_arr[-1]:,.2f}
     - All-time High Balance: ${np.max(cumulative_balance_arr):,.2f}

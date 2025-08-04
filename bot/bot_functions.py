@@ -12,6 +12,7 @@ def get_latest_data(symbol, timeframe, n):
     rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, n)
     df = pd.DataFrame(rates)
     df['time'] = pd.to_datetime(df['time'], unit='s')
+    df['time'] = df['time'].dt.tz_localize('UTC')
     return df
 
 def create_lstm_sequences(data, window_length):
@@ -21,21 +22,12 @@ def create_lstm_sequences(data, window_length):
     return np.array(X_seq)
 
 def build_dataset(df):
-    # ---- 1. Load raw M1 ASCII -----------------------------------------------
     df = df.astype({'open': float, 'high': float, 'low': float, 'close': float, 'tick_volume': float})
     df = df.rename(columns={'time': 'Date_Time', 'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'tick_volume': 'Volume'})
     df.index = df['Date_Time']
-    df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
-    df['Volume'] = 0
+    m5 = df[['Open', 'High', 'Low', 'Close']]
     
-    m5 = df
-# ---- 3. M5 Technical indicators -------------------------------------------
-    m5["rsi"]  = ta.momentum.RSIIndicator(m5["Close"], 14).rsi()
-    macd = ta.trend.MACD(m5["Close"])
-    m5["macd"] = macd.macd_diff()
-    m5["body"] = m5["Close"] - m5["Open"]
-    m5["vol_local"] = m5["High"] - m5["Low"]
-
+    # not dropping the hors because it doen't trade on those hours
     # ---- 3b. Add Rolling M15 (3 x 5m) features --------------------------------
     m5["roll_m15_high"]  = m5["High"].rolling(3).max()
     m5["roll_m15_low"]   = m5["Low"].rolling(3).min()
@@ -49,9 +41,7 @@ def build_dataset(df):
     m5["roll_h1_close"] = m5["Close"].rolling(12).apply(lambda x: x.iloc[-1], raw=False)
     m5["roll_h1_vol"]   = m5["roll_h1_high"] - m5["roll_h1_low"]
     m5["roll_h1_relpos"] = (m5["Close"] - m5["roll_h1_low"]) / (m5["roll_h1_high"] - m5["roll_h1_low"] + 1e-6)
-    m5["returns"] = m5["Close"].pct_change()
-    m5["returns_mean"] = m5["Close"].rolling(12).mean()
-    m5["volatility"] = m5["returns"].rolling(12).std()
+
     # -7. Add temporal features --------------------------------------------
     m5["hour"]          = m5.index.hour
     m5["dayofweek"]     = m5.index.dayofweek
