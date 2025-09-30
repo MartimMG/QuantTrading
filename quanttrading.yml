@@ -22,3 +22,4 @@ dependencies:
       - tensorflow
       - oandapyV20
       - MetaTrader5
+      - fpdf2
